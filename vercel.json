@@ -1,5 +1,4 @@
 {
-  "rootDirectory": "frontend",
   "framework": "nextjs",
   "env": {
     "NEXT_PUBLIC_DEMO_MODE": "true"
