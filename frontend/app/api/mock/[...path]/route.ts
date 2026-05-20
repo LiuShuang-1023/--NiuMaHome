@@ -23,6 +23,189 @@ import {
 // 模拟延迟
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// ── 保障房政策数据库（多城市）──────────────────────────────────
+const HOUSING_POLICY_DB: Record<string, any> = {
+  广州: {
+    public_rental: {
+      name: '公共租赁住房',
+      apply_url: 'https://fgj.gz.gov.cn',
+      app: '穗好办',
+      conditions: ['本市户籍或持有居住证', '家庭月人均收入低于2865元', '在穗无自有住房'],
+      rent_discount: '市场租金 30%-60%',
+      notes: '申请周期约3-6个月，需提供收入证明、社保证明',
+    },
+    talent_apartment: {
+      name: '人才公寓',
+      apply_url: 'https://hr.gz.gov.cn',
+      app: '广州人才服务',
+      conditions: ['本科及以上学历', '落户广州', '年龄45周岁以下', '在穗无自有住房'],
+      rent_discount: '市场租金 70%-85%',
+      notes: '各区政策不同，天河区/南沙区名额较多',
+    },
+    youth_apartment: {
+      name: '青年公寓（新就业）',
+      apply_url: 'https://house.gz.gov.cn',
+      app: null,
+      conditions: ['35周岁以下', '在穗就业满半年', '未在穗购房'],
+      rent_discount: '市场租金 75%-90%',
+      notes: '主要分布在科学城、知识城、南沙等产业园区',
+    },
+  },
+  深圳: {
+    public_rental: {
+      name: '公共租赁住房',
+      apply_url: 'https://zjj.sz.gov.cn',
+      app: 'i深圳',
+      conditions: ['深户或持深圳市居住证', '家庭月人均收入低于4814元', '在深无房'],
+      rent_discount: '市场租金 30%',
+      notes: '轮候排序制，户籍优先；可同时申请安居房',
+    },
+    talent_apartment: {
+      name: '人才住房',
+      apply_url: 'https://zjj.sz.gov.cn',
+      app: 'i深圳',
+      conditions: ['本科及以上或中级职称', '深户或持人才认定证明', '在深连续社保6个月+'],
+      rent_discount: '市场租金 60%',
+      notes: '可申请购买产权人才住房；最高可获租房补贴30000元',
+    },
+    youth_apartment: {
+      name: '安居房（青年）',
+      apply_url: 'https://zjj.sz.gov.cn',
+      app: 'i深圳',
+      conditions: ['35周岁以下未婚或新婚', '在深就业并缴纳社保', '在深无房'],
+      rent_discount: '市场价 50%-60%',
+      notes: '宝安、龙华、坪山供给量大；摇号选房',
+    },
+  },
+  北京: {
+    public_rental: {
+      name: '公共租赁住房',
+      apply_url: 'https://zjw.beijing.gov.cn',
+      app: '北京住房',
+      conditions: ['本市户籍3口之家年收入低于10万', '人均住房面积低于15㎡'],
+      rent_discount: '市场租金 30%',
+      notes: '需通过区住建委审核，轮候时间较长',
+    },
+    talent_apartment: {
+      name: '人才公租房',
+      apply_url: 'https://rsj.beijing.gov.cn',
+      app: '北京人社',
+      conditions: ['本科及以上或高级职称', '工作单位在京', '在京无房'],
+      rent_discount: '市场租金 60%-70%',
+      notes: '海淀、朝阳、昌平、大兴均有项目；可享受租金补贴',
+    },
+    youth_apartment: {
+      name: '青年公寓',
+      apply_url: 'https://zjw.beijing.gov.cn',
+      app: null,
+      conditions: ['35周岁以下', '在京就业', '在京无房'],
+      rent_discount: '市场租金 70%-80%',
+      notes: '主要在中关村、亦庄等产业园区周边',
+    },
+  },
+  上海: {
+    public_rental: {
+      name: '公共租赁住房',
+      apply_url: 'https://zjw.sh.gov.cn',
+      app: '随申办',
+      conditions: ['本市户籍或持有居住证', '在沪稳定就业满1年', '家庭住房困难'],
+      rent_discount: '市场租金 80%-90%',
+      notes: '区级和市级两类，市级面向产业人才',
+    },
+    talent_apartment: {
+      name: '人才公寓',
+      apply_url: 'https://rsj.sh.gov.cn',
+      app: '上海人社',
+      conditions: ['硕士及以上或高级职称', '在沪用人单位推荐', '在沪无房'],
+      rent_discount: '市场租金 60%-80%',
+      notes: '张江、临港、漕河泾等高新区配套较完善',
+    },
+    youth_apartment: {
+      name: '租赁住房',
+      apply_url: 'https://zjw.sh.gov.cn',
+      app: '随申办',
+      conditions: ['35周岁以下青年', '在沪就业', '无房'],
+      rent_discount: '市场租金 80%-95%',
+      notes: '集中式长租公寓，由上海地产、城投等国企运营',
+    },
+  },
+  成都: {
+    public_rental: {
+      name: '公共租赁住房',
+      apply_url: 'https://cdzj.chengdu.gov.cn',
+      app: '天府市民云',
+      conditions: ['本市户籍或居住证', '家庭月人均收入低于2105元', '在蓉无房'],
+      rent_discount: '市场租金 50%',
+      notes: '高新区、天府新区房源较多',
+    },
+    talent_apartment: {
+      name: '人才公寓',
+      apply_url: 'https://hrss.chengdu.gov.cn',
+      app: '蓉e行',
+      conditions: ['本科及以上学历', '在蓉用人单位工作', '在蓉无房'],
+      rent_discount: '市场租金 70%；满5年可购买',
+      notes: '可享每月600-1500元租房补贴；天府人才计划专项支持',
+    },
+    youth_apartment: {
+      name: '青年人才驿站',
+      apply_url: 'https://hrss.chengdu.gov.cn',
+      app: '蓉漂码',
+      conditions: ['35周岁以下', '来蓉求职7天内', '本科及以上学历'],
+      rent_discount: '免费入住7天',
+      notes: '面向应届毕业生求职，全市20+驿站',
+    },
+  },
+  杭州: {
+    public_rental: {
+      name: '公共租赁住房',
+      apply_url: 'https://zjj.hangzhou.gov.cn',
+      app: '杭州办事服务',
+      conditions: ['本市户籍或持居住证', '家庭月人均收入低于4860元', '在杭无房'],
+      rent_discount: '市场租金 60%-80%',
+      notes: '可申请货币补贴或实物配租',
+    },
+    talent_apartment: {
+      name: '人才租赁房',
+      apply_url: 'https://rsj.hangzhou.gov.cn',
+      app: '杭州人才码',
+      conditions: ['本科及以上或B-E类人才', '在杭就业', '在杭无房'],
+      rent_discount: '市场租金 70%-90%',
+      notes: '可享购房补贴最高800万；A类人才配套住房',
+    },
+    youth_apartment: {
+      name: '蓝领公寓',
+      apply_url: 'https://zjj.hangzhou.gov.cn',
+      app: null,
+      conditions: ['在杭就业的青年职工', '家庭在杭无房'],
+      rent_discount: '低于市场价 30%-50%',
+      notes: '主要服务于产业工人和新就业人员',
+    },
+  },
+};
+
+function buildHousingResponse(city: string) {
+  const cityData = HOUSING_POLICY_DB[city];
+  if (cityData) {
+    return {
+      city,
+      source: 'db' as const,
+      ...cityData,
+      fetched_at: new Date().toISOString(),
+      is_stale: false,
+      disclaimer: '政策信息以当地住建局/人社局官网公告为准，演示数据仅供参考',
+    };
+  }
+  // 未收录城市：返回 AI 生成兜底
+  return {
+    city,
+    source: 'ai' as const,
+    ai_summary: `${city} 暂未收录到内置数据库。演示模式下提供如下通用参考：\n\n1. 公共租赁住房：面向户籍困难家庭和稳定就业外来人员\n2. 人才公寓：面向高学历人才，通常本科起步\n3. 青年公寓：面向35周岁以下新就业人员\n\n请前往 ${city} 当地住建局官网查询最新政策。`,
+    fetched_at: new Date().toISOString(),
+    is_stale: false,
+    disclaimer: '演示模式 AI 生成内容，请以当地官网为准',
+  };
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { path: string[] } },
@@ -38,6 +221,18 @@ export async function GET(
       progress: '完成',
       result: MOCK_SEARCH_RESPONSE,
     });
+  }
+
+  // housing/policy_info GET — 保障房政策查询
+  if (path === 'housing/policy_info') {
+    await delay(400);
+    const city = new URL(req.url).searchParams.get('city') || '广州';
+    return NextResponse.json(buildHousingResponse(city));
+  }
+
+  // housing/stale_check
+  if (path === 'housing/stale_check') {
+    return NextResponse.json({ stale_cities: [], total: 0 });
   }
 
   return NextResponse.json({ ok: true });
@@ -248,39 +443,11 @@ export async function POST(
     });
   }
 
-  // ── 保障房政策 ────────────────────────────────────────────
+  // ── 保障房政策（POST：policy_ai 兜底）────────────────────────
   if (path === 'housing/policy_info' || path === 'housing/policy_ai') {
     await delay(600);
     const city = body?.city || new URL(req.url).searchParams.get('city') || '广州';
-    return NextResponse.json({
-      city,
-      source: 'db',
-      public_rental: {
-        name: '公共租赁住房',
-        apply_url: 'https://fgj.gz.gov.cn',
-        app: '穗好办',
-        conditions: ['户籍或工作居住证', '月收入低于当地标准', '在穗无自有住房'],
-        rent_discount: '市场租金 60%-80%',
-        notes: '（演示数据）申请周期约3-6个月，需提供收入证明',
-      },
-      talent_apartment: {
-        name: '人才公寓',
-        apply_url: 'https://hr.gz.gov.cn',
-        app: '广州人才服务',
-        conditions: ['本科及以上学历', '落户广州', '年龄45周岁以下'],
-        rent_discount: '市场租金 70%-85%',
-        notes: '（演示数据）各区政策不同，天河区名额较多',
-      },
-      youth_apartment: {
-        name: '青年公寓',
-        apply_url: 'https://house.gz.gov.cn',
-        app: null,
-        conditions: ['35周岁以下', '在穗就业', '未在穗购房'],
-        rent_discount: '市场租金 75%-90%',
-        notes: '（演示数据）主要分布在产业园区周边',
-      },
-      disclaimer: '演示数据仅供参考，实际政策以官网公告为准',
-    });
+    return NextResponse.json(buildHousingResponse(city));
   }
 
   // ── session 操作 ──────────────────────────────────────────
