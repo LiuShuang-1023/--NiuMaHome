@@ -1,92 +1,168 @@
-# newwj
+# 牛马归栏 (NiuMaHome) v0.9.2
 
+> 打工人，回家路上少操点心。
 
+AI 租房助理：自然语言描述需求 → 四平台聚合（链家/贝壳/安居客/58同城）→ 真实月支出测算 → 三地图通勤精算 → 智能排序推荐。
 
-## Getting started
+---
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## 🚀 快速启动（本地开发）
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+### 环境要求
+- Node.js 18+
+- Python 3.11+
 
-## Add your files
+### 1. 安装依赖
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+```cmd
+:: 后端
+cd backend
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+
+:: 前端
+cd frontend
+npm install
+```
+
+### 2. 配置密钥
+
+复制 `.env.example` 为 `.env.local`，填写以下字段：
+
+```env
+LLM_PROVIDER=deepseek
+DEEPSEEK_API_KEY=sk-xxx
+AMAP_KEY=xxx
+TENCENT_KEY=xxx
+BAIDU_AK=xxx
+BAIDU_SK=xxx
+LIANJIA_COOKIE=xxx    # 从浏览器 F12 复制
+BEIKE_COOKIE=xxx
+ANJUKE_COOKIE=        # 可选
+WUBA_COOKIE=          # 可选，JS渲染站点，填入后才有58同城房源
+```
+
+### 3. 启动
+
+```cmd
+:: 后端（新窗口）
+cd backend && .venv\Scripts\uvicorn app.main:app --port 8001 --reload
+
+:: 前端（新窗口）
+cd frontend && npm run dev
+```
+
+访问 http://localhost:3000
+
+---
+
+## 🌐 演示模式部署（Vercel，无需后端）
+
+演示模式使用内置 Mock 数据，完全不需要后端服务器、Cookie 或 API Key。
+适合作品集展示和 Demo。
+
+### 方式一：Vercel CLI（推荐）
+
+```bash
+npm i -g vercel
+cd newwj   # 项目根目录（含 vercel.json）
+vercel      # 按提示登录后自动部署
+# 或直接指定演示模式环境变量：
+vercel --env NEXT_PUBLIC_DEMO_MODE=true
+```
+
+部署完成后 Vercel 会给你一个 `xxx.vercel.app` 的公网域名。
+
+### 方式二：Vercel 网页操作
+
+1. 注册 [vercel.com](https://vercel.com)（免费）
+2. 新建项目 → Import Git Repository（或直接 Upload 项目文件夹）
+3. 设置 **Environment Variables**：
+   - `NEXT_PUBLIC_DEMO_MODE` = `true`
+4. **Root Directory** 设为 `frontend`
+5. Framework Preset 选 `Next.js`
+6. 点击 Deploy，等待 1-2 分钟
+
+### 方式三：本地预览演示模式
+
+```cmd
+cd frontend
+set NEXT_PUBLIC_DEMO_MODE=true && npm run dev
+```
+
+---
+
+## 🖥️ 生产部署（真实数据，需服务器）
+
+推荐：腾讯云/阿里云轻量应用服务器（2核2G，~60元/月）
+
+```bash
+# 服务器上
+git clone <你的仓库> / 或解压上传的 tar.gz
+
+# 安装依赖（同本地开发）
+# 配置 .env.local（含 Cookie 和 API Key）
+
+# 用 PM2 守护进程
+npm i -g pm2
+pm2 start "cd backend && .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8001" --name niumahome-backend
+pm2 start "cd frontend && npm run build && npm run start" --name niumahome-frontend
+
+# Nginx 反向代理（参考）
+# location / { proxy_pass http://localhost:3000; }
+```
+
+---
+
+## 📁 项目结构
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.liebaopay.com/liushuang3/newwj.git
-git branch -M master
-git push -uf origin master
+newwj/
+├── backend/              # FastAPI 后端
+│   ├── app/
+│   │   ├── api/          # 路由：chat/search/listings/commute/utility/agent/subsidy/housing
+│   │   ├── services/
+│   │   │   ├── crawler/  # 链家/贝壳/安居客/58同城 爬虫
+│   │   │   ├── map/      # 高德/腾讯/百度 地图通勤
+│   │   │   ├── cost/     # 真实成本测算引擎
+│   │   │   ├── llm/      # DeepSeek AI 客户端
+│   │   │   ├── ranker/   # 房源排序引擎
+│   │   │   └── storage/  # SQLite session/cache/commute_store
+│   │   └── models/       # Pydantic 数据模型
+│   └── data/             # 运行时 DB（自动创建）
+├── frontend/             # Next.js 14 前端
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── img-proxy/ # 图片防盗链代理（安居客/58）
+│   │   │   └── mock/      # 演示模式 Mock API
+│   │   └── page.tsx       # 主页面（Landing + 搜索结果三列布局）
+│   ├── components/        # React 组件
+│   └── lib/               # API封装/类型/工具
+├── docs/
+│   ├── CHANGELOG.md       # 完整版本日志
+│   └── PRD.md             # 产品需求文档
+├── vercel.json            # Vercel 演示部署配置
+└── .env.local             # 密钥（不提交，需手动配置）
 ```
 
-## Integrate with your tools
+---
 
-- [ ] [Set up project integrations](https://gitlab.liebaopay.com/liushuang3/newwj/-/settings/integrations)
+## 🛠️ 技术栈
 
-## Collaborate with your team
+| 层级 | 技术 |
+|---|---|
+| 前端 | Next.js 14 + TypeScript + Tailwind CSS |
+| 后端 | FastAPI + Python 3.11 + Pydantic v2 |
+| AI | DeepSeek Chat（OpenAI 兼容协议） |
+| 地图 | 高德 + 腾讯 + 百度（三地图协同，21000次/天免费） |
+| 存储 | SQLite（session/cache/commute/housing_policy） |
+| 爬虫 | httpx + BeautifulSoup4 + brotli |
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+---
 
-## Test and Deploy
+## ⚠️ 注意事项
 
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+- **58同城**：纯 JS 渲染 + xxzl 指纹验证，httpx 无法绕过，需填入 `WUBA_COOKIE` 才有数据
+- **链家/贝壳 Cookie**：约 7-14 天失效，需从浏览器重新复制
+- **高德 Key**：个人版 QPS=3，系统已做 Semaphore 节流，无需升级
+- **演示模式**：所有房源为模拟数据，图片来自 Unsplash，无真实房源 URL
