@@ -20,6 +20,9 @@ import {
   MOCK_CHAT_REPLIES,
 } from '@/lib/mockData';
 
+// Cloudflare Pages 必须用 Edge Runtime
+export const runtime = 'edge';
+
 // 模拟延迟
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

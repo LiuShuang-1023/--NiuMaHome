@@ -15,6 +15,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
+// Cloudflare Pages 必须用 Edge Runtime
+export const runtime = 'edge';
+
 // 域名 → Referer 映射表
 const REFERER_MAP: Array<{ pattern: RegExp; referer: string }> = [
   { pattern: /anjuke\.com|ajkimg\.com/i,          referer: 'https://www.anjuke.com/' },
